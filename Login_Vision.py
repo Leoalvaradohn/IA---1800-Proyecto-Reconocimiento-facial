@@ -1,28 +1,23 @@
 #--------------------------------------Importamos librerias--------------------------------------------
-
 from tkinter import *
-import time
 import os
 import cv2
 from matplotlib import pyplot
 from mtcnn.mtcnn import MTCNN
 import numpy as np
-
+import face_recognition
 #------------------------ Crearemos una funcion que se encargara de registrar el usuario ---------------------
 
 def registrar_usuario():
     usuario_info = usuario.get() #Obetnemos la informacion alamcenada en usuario
     contra_info = contra.get() #Obtenemos la informacion almacenada en contra
-
     archivo = open(usuario_info, "w") #Abriremos la informacion en modo escritura
     archivo.write(usuario_info + "\n")   #escribimos la info
     archivo.write(contra_info)
     archivo.close()
-
     #Limpiaremos los text variable
     usuario_entrada.delete(0, END)
     contra_entrada.delete(0, END)
-
     #Ahora le diremos al usuario que su registro ha sido exitoso
     Label(pantalla1, text = "Registro Exitoso", fg = "green", font = ("Calibri",12)).pack()
     
@@ -127,16 +122,56 @@ def verificacion_login():
 #--------------------------Funcion para el Login Facial --------------------------------------------------------
 def login_facial():
 #------------------------------Vamos a capturar el rostro-----------------------------------------------------
-    cap = cv2.VideoCapture(0)               #Elegimos la camara con la que vamos a hacer la deteccion
-    while(True):
-        ret,frame = cap.read()                              #Leemos el video
-        cv2.imshow('Face ID',frame)               #Mostramos el video en pantalla
-        if cv2.waitKey(2000):                       #Cuando oprimamos "Enter" rompe el video
-            break
+   # Imagen a comparar
+    image = cv2.imread("Hector.jpg")
+    face_loc = face_recognition.face_locations(image)[0]
+    face_image_encodings = face_recognition.face_encodings(image, known_face_locations=[face_loc])[0]
+    print("face_image_encodings:", face_image_encodings)
+    '''
+    cv2.rectangle(image, (face_loc[3], face_loc[0]), (face_loc[1], face_loc[2]), (0, 255, 0))
+    cv2.imshow("Image", image)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()'''
+    
+    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)        #Elegimos la camara con la que vamos a hacer la deteccion
+    while (True):
+     ret, frame = cap.read()
+     frame = cv2.flip(frame, 1)
+     face_locations = face_recognition.face_locations(frame, model="hog")
+     if face_locations != []:
+          for face_location in face_locations:
+               face_frame_encodings = face_recognition.face_encodings(frame, known_face_locations=[face_location])[0]
+               result = face_recognition.compare_faces([face_image_encodings], face_frame_encodings)
+
+               if result[0] == True:
+                    text = "Identificado"
+                    color = (125, 220, 0)
+               else:
+                    text = ""
+                    color = (50, 50, 255)
+
+               cv2.rectangle(frame, (face_location[3], face_location[2]), (face_location[1], face_location[2] + 30), color, -1)
+               cv2.rectangle(frame, (face_location[3], face_location[0]), (face_location[1], face_location[2]), color, 2)
+               cv2.putText(frame, text, (face_location[3], face_location[2] + 20), 2, 0.7, (255, 255, 255), 1)
+
+
+     cv2.imshow("Reconociendo el rostro", frame)
+     if cv2.waitKey(1)==13:
+        break
+    
     usuario_login = verificacion_usuario.get()    #Con esta variable vamos a guardar la foto pero con otro nombre para no sobreescribir
-    cv2.imwrite(usuario_login+"LOG.jpg",frame)       #Guardamos la ultima caputra del video como imagen y asignamos el nombre del usuario
-    cap.release()                               #Cerramos
+    cv2.imwrite(usuario_login+"LOG.jpg",frame)     
+    cap.release()
     cv2.destroyAllWindows()
+    # while(True):
+    #     ret,frame = cap.read()                    #Leemos el video
+    #     cv2.imshow('Face ID',frame)               #Mostramos el video en pantalla
+    #     if cv2.waitKey(2000):                     #Cuando oprimamos "Enter" rompe el video
+    #         break
+    # usuario_login = verificacion_usuario.get()    #Con esta variable vamos a guardar la foto pero con otro nombre para no sobreescribir
+    # cv2.imwrite(usuario_login+"LOG.jpg",frame)    #Guardamos la ultima caputra del video como imagen y asignamos el nombre del usuario
+    # cap.release()                                 #Cerramos
+    # cv2.destroyAllWindows()
 
     usuario_entrada2.delete(0, END)   #Limpiamos los text variables
     contra_entrada2.delete(0, END)
